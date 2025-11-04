@@ -1,4 +1,4 @@
-name: Deploy to AWS ECS
+name: Build and Push to ECR
 
 on:
   push:
@@ -17,22 +17,17 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+          aws-region: us-east-2   # 👈 Ohio region
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/flask-ecs-demo:latest
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
-
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ecs-task-def.json
-          service: flask-service
-          cluster: flask-cluster
-          wait-for-service-stability: true
+          IMAGE_TAG=latest
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
